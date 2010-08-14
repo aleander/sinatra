@@ -21,6 +21,9 @@ end
 module Sinatra
   VERSION = '1.0'
 
+  class SinatraError < StandardError
+  end
+  
   # The request object. See Rack::Request for more info:
   # http://rack.rubyforge.org/doc/classes/Rack/Request.html
   class Request < Rack::Request
@@ -296,6 +299,9 @@ module Sinatra
   #                 in the template
   module Templates
     include Tilt::CompileSite
+    
+    class TemplateNotFound < SinatraError
+    end
 
     def erb(template, options={}, locals={})
       options[:outvar] = '@_out_buf'
@@ -348,6 +354,7 @@ module Sinatra
           options = options.merge(:views => views, :layout => false)
           output = render(engine, layout, options, locals) { output }
         rescue Errno::ENOENT
+        rescue TemplateNotFound
         end
       end
 
@@ -366,8 +373,17 @@ module Sinatra
             body = body.call if body.respond_to?(:call)
             template.new(path, line.to_i, options) { body }
           else
-            path = ::File.join(views, "#{data}.#{engine}")
-            template.new(path, 1, options)
+            saved_exception = nil
+            (views.is_a?(Array) ? views : [views]).each do |view_dir|
+              begin
+                path = ::File.join(view_dir, "#{data}.#{engine}")
+                return template.new(path, 1, options)
+              rescue Errno::ENOENT => e
+                saved_exception = e
+              end
+            end
+            
+            views.is_a?(Array) ? raise(TemplateNotFound.new("Failed to find template #{data}, tried in #{views.join(', ')}")) : raise(saved_exception)
           end
         when data.is_a?(Proc) || data.is_a?(String)
           body = data.is_a?(String) ? Proc.new { data } : data

@@ -103,6 +103,27 @@ class TemplatesTest < Test::Unit::TestCase
 
     assert_equal "from another views directory\n", body
   end
+  
+  it 'loads templates from multiple directories' do
+    with_default_layout do
+      render_app {render :test, :hello, :views => ['foobar', options.views]}
+    
+      assert ok?
+      assert_equal "Layout!\nHello World!\n", body
+    end
+  end
+  
+  it 'correctly loads templates with no layout and multiple directories' do
+    assert_nothing_raised {
+      render_app {render :test, :hello, :views => ['foobar', options.views]}
+    }
+  end
+  
+  it 'correctly prioritises multiple directories' do
+    render_app { render :test, :hello, :views => [options.views + '/foo', options.views] }
+
+    assert_equal "from another views directory\n", body
+  end
 
   it 'passes locals to the layout' do
     mock_app {
