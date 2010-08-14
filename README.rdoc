@@ -114,6 +114,15 @@ templates with symbols, even if they're in a subdirectory (in this
 case use <tt>:'subdir/template'</tt>). Rendering methods will render
 any strings passed to them directly.
 
+You can also set views to an array:
+
+  set :views, [File.dirname(__FILE__) + '/templates', '/some/other/dir']
+
+If the template could not be found and :views is a String rendering
+will fail with Errno::ENOENT. If :views is an Array, the error will
+be Sinatra::Templates::TemplateNotFound. The inconsistency is
+introduced for backwards compatibility.
+
 === Haml Templates
 
 The haml gem/library is required to render HAML templates:
